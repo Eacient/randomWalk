@@ -38,7 +38,7 @@ if __name__ == '__main__':
 
 
     os.makedirs(args.out_cam, exist_ok=True)
-    os.makedirs(args.out_crf, exist_ok=True)
+    # os.makedirs(args.out_crf, exist_ok=True)
     os.makedirs(args.out_cam_pred, exist_ok=True)
         
     infer_dataset = voc12.data.VOC12ClsDatasetMSF(args.infer_list, voc12_root=args.voc12_root,
