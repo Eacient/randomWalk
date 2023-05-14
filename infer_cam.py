@@ -14,13 +14,20 @@ from PIL import Image
 import torch.nn.functional as F
 import pandas as pd
 
+def sigmoid(Z):
+
+    A=1/(1+(np.exp((-Z))))
+
+    return A
+
+
 if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--weights", required=True, type=str)
     parser.add_argument("--network", default="network.resnet38_cam", type=str)
     parser.add_argument("--infer_list", default="voc12/train.txt", type=str)
-    parser.add_argument("--num_workers", default=8, type=int)
+    parser.add_argument("--num_workers", default=16, type=int)
     parser.add_argument("--voc12_root", default='VOC2012', type=str)
     parser.add_argument("--out_cam", default=None, type=str)
     parser.add_argument("--out_crf", default=None, type=str) 
@@ -71,13 +78,13 @@ if __name__ == '__main__':
                     return cam
 
         thread_pool = pyutils.BatchThreader(_work, list(enumerate(img_list)),
-                                            batch_size=12, prefetch_size=0, processes=args.num_workers)
+                                            batch_size=16, prefetch_size=8, processes=args.num_workers)
 
         cam_list = thread_pool.pop_results()
 
         sum_cam = np.sum(cam_list, axis=0)
         if args.sigmoid:
-            norm_cam = torch.sigmoid(sum_cam)
+            norm_cam = sigmoid(sum_cam)
         else:
             sum_cam[sum_cam < 0] = 0
             cam_max = np.max(sum_cam, (1,2), keepdims=True)
