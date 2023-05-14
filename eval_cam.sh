@@ -1,4 +1,7 @@
-$voc_root
+$voc_root=
+$your_cam_dir=
+$voc_root=
+$commnet=
 python evaluation.py \
 --list VOC2012/ImageSets/Segmentation/val.txt \
 --predict_dir $your_cam_dir \

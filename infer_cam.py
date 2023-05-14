@@ -29,7 +29,7 @@ if __name__ == '__main__':
     parser.add_argument("--sigmoid", aciton='store_true')
 
     args = parser.parse_args()
-    crf_alpha = [4,24]
+    crf_alpha = [4,24,32]
     model = getattr(importlib.import_module(args.network), 'Net')()
     model.load_state_dict(torch.load(args.weights))
 
