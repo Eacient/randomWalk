@@ -4,7 +4,7 @@ import torch
 import cv2
 import os
 import voc12.data
-import scipy.misc
+import imageio
 import importlib
 from torch.utils.data import DataLoader
 import torchvision
@@ -18,7 +18,7 @@ if __name__ == '__main__':
 
     parser = argparse.ArgumentParser()
     parser.add_argument("--weights", required=True, type=str)
-    parser.add_argument("--network", default="network.resnet38_SEAM", type=str)
+    parser.add_argument("--network", default="network.resnet38_cam", type=str)
     parser.add_argument("--infer_list", default="voc12/train.txt", type=str)
     parser.add_argument("--num_workers", default=8, type=int)
     parser.add_argument("--voc12_root", default='VOC2012', type=str)
@@ -26,15 +26,20 @@ if __name__ == '__main__':
     parser.add_argument("--out_crf", default=None, type=str) 
     parser.add_argument("--out_cam_pred", default=None, type=str)
     parser.add_argument("--out_cam_pred_alpha", default=0.26, type=float)
-    parser.add_argument("--sigmoid", aciton='store_true')
+    parser.add_argument("--sigmoid", action='store_true')
 
     args = parser.parse_args()
-    crf_alpha = [4,24,32]
+    crf_alpha = [4,24]
     model = getattr(importlib.import_module(args.network), 'Net')()
     model.load_state_dict(torch.load(args.weights))
 
     model.eval()
     model.cuda()
+
+
+    os.makedirs(args.out_cam, exist_ok=True)
+    os.makedirs(args.out_crf, exist_ok=True)
+    os.makedirs(args.out_cam_pred, exist_ok=True)
         
     infer_dataset = voc12.data.VOC12ClsDatasetMSF(args.infer_list, voc12_root=args.voc12_root,
                                                   scales=[0.5, 1.0, 1.5, 2.0],
@@ -59,7 +64,7 @@ if __name__ == '__main__':
             with torch.no_grad():
                 with torch.cuda.device(i%n_gpus):
                     _, cam = model_replicas[i%n_gpus](img.cuda())
-                    cam = F.upsample(cam[:,1:,:,:], orig_img_size, mode='bilinear', align_corners=False)[0]
+                    cam = F.upsample(cam, orig_img_size, mode='bilinear', align_corners=False)[0]
                     cam = cam.cpu().numpy() * label.clone().view(20, 1, 1).numpy()
                     if i % 2 == 1:
                         cam = np.flip(cam, axis=-1)
@@ -91,7 +96,7 @@ if __name__ == '__main__':
         if args.out_cam_pred is not None:
             bg_score = [np.ones_like(norm_cam[0])*args.out_cam_pred_alpha]
             pred = np.argmax(np.concatenate((bg_score, norm_cam)), 0)
-            scipy.misc.imsave(os.path.join(args.out_cam_pred, img_name + '.png'), pred.astype(np.uint8))
+            imageio.imwrite(os.path.join(args.out_cam_pred, img_name + '.png'), pred.astype(np.uint8))
 
         def _crf_with_alpha(cam_dict, alpha):
             v = np.array(list(cam_dict.values()))
